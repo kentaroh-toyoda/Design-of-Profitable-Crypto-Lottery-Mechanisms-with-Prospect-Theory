@@ -1,0 +1,11 @@
+version: "2"
+
+services:
+  r:
+    build:
+      context: .
+    volumes:
+      - ./plots:/workspace/plots:rw
+    # command: prize_dist_by_mechanisms.R
+    command: plot_value_and_probability_weighting_functions.R
+    # command: utility_comparison.R

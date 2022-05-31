@@ -1,5 +1,7 @@
 require("tidyverse")
+save_dir <- "./plots/"
 
+print(system("ls -al"))
 n_participants <- 100
 mechanisms <- c(
   "winner-take-all",
@@ -8,15 +10,15 @@ mechanisms <- c(
   "three bands"
 )
 
-prize_dist <- function(n, mechanism, k = 0.2) {
+prize_dist <- function(n, mechanism, r = 0.2) {
   if (mechanism == "winner-take-all") {
     c(1, rep(0, n - 1))
   } else if (mechanism == "top-k (linear weighting)") {
-    n_prizes <- round(n * k)
-    c((n_prizes:1) / (n_prizes * (n_prizes + 1) / 2), rep(0, n - n_prizes))
+    k <- round(n * r)
+    c((k:1) / (k * (k + 1) / 2), rep(0, n - k))
   } else if (mechanism == "top-k (exponential weighting)") {
-    n_prizes <- round(n * k)
-    c((1 / 2)^(1:n_prizes), rep(0, n - n_prizes))
+    k <- round(n * r)
+    c((1 / 2)^(1:k), rep(0, n - k))
   } else if (mechanism == "three bands") {
     if (n < 50) {
       NA
@@ -27,9 +29,10 @@ prize_dist <- function(n, mechanism, k = 0.2) {
 }
 
 parameters <- expand.grid(
-  mechanism = mechanisms,
-  n = n_participants
+  n = n_participants,
+  mechanism = mechanisms
 )
+
 tmp <- parameters %>%
   purrr::pmap(prize_dist) %>%
   purrr::map_df(broom::tidy)
@@ -46,10 +49,9 @@ g <- prize_distribution %>%
   xlab("Rank") +
   ylab("Ratio") +
   scale_x_continuous(n.breaks = 10) +
-  facet_wrap(. ~ mechanism, ncol = 2, scales = "free") +
-  theme_bw()
+  facet_wrap(. ~ mechanism, ncol = 2, scales = "free")
 
 ggsave(
-  filename = "prize_dist_by_mechanisms.pdf", plot = g,
-  width = 6, height = 4.5
+  filename = paste0(save_dir, "prize_dist_by_mechanisms.pdf"),
+  plot = g, width = 6, height = 4.5
 )
