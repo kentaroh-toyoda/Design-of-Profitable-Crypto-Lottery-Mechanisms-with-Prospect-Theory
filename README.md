@@ -1,6 +1,6 @@
 # Overview
 
-This contains R programs and docker files to reproduce the results of our paper submitted to IEEE BRAINS 2022.
+This contains R programs and docker files to reproduce the results of our paper "Design of Profitable Crypto Lottery Mechanisms with Prospect Theory" submitted to IEEE BRAINS 2022.
 
 # Prerequisites
 
