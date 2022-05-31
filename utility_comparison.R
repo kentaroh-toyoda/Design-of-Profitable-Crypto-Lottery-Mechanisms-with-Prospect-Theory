@@ -50,7 +50,7 @@ calc_utility <- function(theory, mechanism, n, r_com, fee, func,
                          top_k_weighting, top_k_ratio) {
   total <- n * (1 - r_com) * fee
   if (theory == "EUT") {
-    # under expected utlity maximizer
+    # under expected utility maximizer
     if (mechanism == "winner-take-all") {
       1 / n * (total - fee) + (1 - 1 / n) * (-fee)
     } else if (stringr::str_detect(mechanism, "^top")) {
@@ -85,7 +85,7 @@ calc_utility <- function(theory, mechanism, n, r_com, fee, func,
   }
 }
 ################################################################################
-## utlity versus number of participants (with different v and p, EUT vs CPT)  ##
+## utility versus number of participants (with different v and p, EUT vs CPT)  ##
 ################################################################################
 # theory: whether participants' behavior is assumed to be EUT or CPT
 # mechanism: game rule that determines how rewards are given to participants
@@ -96,7 +96,7 @@ calc_utility <- function(theory, mechanism, n, r_com, fee, func,
 # top-k: k denotes how much participants would receive prizes in %
 # top-k-weighting: how prizes are split in top-k mechanisms
 parameters <- expand.grid(
-  theory = c("EUT", "CPT"),
+  theory = factor(c("CPT", "EUT"), levels = c("CPT", "EUT")),
   mechanism = c(
     "winner-take-all",
     "top 16% (linear)",
@@ -154,7 +154,7 @@ ggsave(
 )
 
 ################################################################################
-## utlity versus number of participants (with differnt k ) ##
+## utility versus number of participants (with different k) ##
 ################################################################################
 parameters <- expand.grid(
   theory = "CPT",
@@ -216,7 +216,7 @@ ggsave(
 )
 
 ################################################################################
-## average utlity versus number of participants (with differnt k) ##
+## average utility versus number of participants (with different k)           ##
 ################################################################################
 p <- utility_participants %>%
   dplyr::group_by(top_k_ratio, top_k_weighting) %>%
@@ -312,7 +312,7 @@ utility_participants %>%
 ################################################################################
 # We use the previous results for this
 p <- utility_participants %>%
-  # Organizer's profit is 0 if utlity <= 0, otherwise r_com * n * fee
+  # Organizer's profit is 0 if utility <= 0, otherwise r_com * n * fee
   dplyr::mutate(profit = ifelse(utility <= 0,
     0,
     r_com * n * fee
