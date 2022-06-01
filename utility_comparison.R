@@ -46,9 +46,9 @@ utility_top_k <- function(theory, n, total, fee, top_k_weighting, top_k_ratio,
   }
 }
 
-calc_utility <- function(theory, mechanism, n, r_com, fee, func,
+calc_utility <- function(theory, mechanism, n, r, fee, func,
                          top_k_weighting, top_k_ratio) {
-  total <- n * (1 - r_com) * fee
+  total <- n * (1 - r) * fee
   if (theory == "EUT") {
     # under expected utility maximizer
     if (mechanism == "winner-take-all") {
@@ -90,7 +90,7 @@ calc_utility <- function(theory, mechanism, n, r_com, fee, func,
 # theory: whether participants' behavior is assumed to be EUT or CPT
 # mechanism: game rule that determines how rewards are given to participants
 # n: number of participants
-# r_com: top_k_ratio of commission fee
+# r: how much an organizer takes
 # fee: fee paid by a participant
 # func: which value and weighting functions are used
 # top-k: k denotes how much participants would receive prizes in %
@@ -104,7 +104,7 @@ parameters <- expand.grid(
     "three-bands"
   ),
   n = 1:200,
-  r_com = 0.1,
+  r = 0.1,
   fee = 1,
   func = c("Tversky and Kahneman", "Prelec")
 ) %>%
@@ -161,7 +161,7 @@ parameters <- expand.grid(
   top_k_ratio = 1:100,
   top_k_weighting = c("linear", "exponential"),
   n = 1:200,
-  r_com = 0.1,
+  r = 0.1,
   fee = 1,
   func = "Tversky and Kahneman"
 ) %>%
@@ -171,7 +171,7 @@ parameters <- expand.grid(
       paste0("top ", top_k_ratio, "% (", top_k_weighting, ")")
   ) %>%
   dplyr::select(
-    theory, mechanism, n, r_com, fee, func, top_k_weighting,
+    theory, mechanism, n, r, fee, func, top_k_weighting,
     top_k_ratio
   )
 
@@ -255,7 +255,7 @@ parameters <- expand.grid(
   top_k_ratio = 15,
   top_k_weighting = "linear",
   n = 1:200,
-  r_com = c(0.1, 0.2),
+  r = c(0.1, 0.2),
   fee = 1:3,
   func = "Tversky and Kahneman"
 ) %>%
@@ -265,7 +265,7 @@ parameters <- expand.grid(
       paste0("top ", top_k_ratio, "% (", top_k_weighting, ")")
   ) %>%
   dplyr::select(
-    theory, mechanism, n, r_com, fee, func, top_k_weighting, top_k_ratio
+    theory, mechanism, n, r, fee, func, top_k_weighting, top_k_ratio
   )
 
 tmp <- parameters %>%
@@ -274,12 +274,13 @@ tmp <- parameters %>%
 utility_participants <- bind_cols(parameters, utility = tmp)
 
 p <- utility_participants %>%
+  dplyr::mutate(r = paste0(r * 100, "%")) %>%
   dplyr::mutate(
-    f_entry = factor(fee, levels = 1:3),
-    r_com = factor(r_com, levels = c(0.1, 0.2))
+    f = factor(fee, levels = 1:3),
+    r = factor(r, levels = c("10%", "20%"))
   ) %>%
   ggplot(aes(
-    x = n, y = utility, color = f_entry, linetype = r_com
+    x = n, y = utility, color = f, linetype = r
   )) +
   geom_line() +
   xlab("Number of participants") +
@@ -296,33 +297,34 @@ p <- utility_participants %>%
   )
 
 ggsave(
-  filename = paste0(save_dir, "utility_fee_r_com.pdf"), plot = p,
+  filename = paste0(save_dir, "utility_fee_r.pdf"), plot = p,
   width = 4, height = 3
 )
 
 # when a utility gets positive (by each mechanism)
 utility_participants %>%
   dplyr::filter(utility > 0) %>%
-  dplyr::group_by(fee, r_com) %>%
+  dplyr::group_by(fee, r) %>%
   dplyr::slice(which.min(utility)) %>%
-  dplyr::select(r_com, fee, n)
+  dplyr::select(r, fee, n)
 
 ################################################################################
 ## Organizer's profit                                                         ##
 ################################################################################
 # We use the previous results for this
 p <- utility_participants %>%
-  # Organizer's profit is 0 if utility <= 0, otherwise r_com * n * fee
+  # Organizer's profit is 0 if utility <= 0, otherwise r * n * fee
   dplyr::mutate(profit = ifelse(utility <= 0,
     0,
-    r_com * n * fee
+    r * n * fee
   )) %>%
+  dplyr::mutate(r = paste0(r * 100, "%")) %>%
   dplyr::mutate(
-    f_entry = factor(fee, levels = 1:3),
-    r_com = factor(r_com, levels = c(0.1, 0.2))
+    f = factor(fee, levels = 1:3),
+    r = factor(r, levels = c("10%", "20%"))
   ) %>%
   ggplot(aes(
-    x = n, y = profit, color = f_entry, linetype = r_com
+    x = n, y = profit, color = f, linetype = r
   )) +
   geom_line() +
   xlab("Number of participants") +
