@@ -1,4 +1,5 @@
 require("tidyverse")
+require("scales")
 
 save_dir <- "./plots/"
 
@@ -55,7 +56,7 @@ calc_utility <- function(theory, mechanism, n, r, fee, func,
       1 / n * (total - fee) + (1 - 1 / n) * (-fee)
     } else if (stringr::str_detect(mechanism, "^top")) {
       utility_top_k(theory, n, total, fee, top_k_weighting, top_k_ratio, func)
-    } else if (mechanism == "three-bands") {
+    } else if (mechanism == "three bands") {
       if (n < 50) {
         NA
       } else {
@@ -72,7 +73,7 @@ calc_utility <- function(theory, mechanism, n, r, fee, func,
         pi(1 - 1 / n, func) * v(-fee, func)
     } else if (stringr::str_detect(mechanism, "^top")) {
       utility_top_k(theory, n, total, fee, top_k_weighting, top_k_ratio, func)
-    } else if (mechanism == "three-bands") {
+    } else if (mechanism == "three bands") {
       if (n < 50) {
         NA
       } else {
@@ -85,7 +86,7 @@ calc_utility <- function(theory, mechanism, n, r, fee, func,
   }
 }
 ################################################################################
-## utility versus number of participants (with different v and p, EUT vs CPT)  ##
+## utility versus number of participants (with different v and p, EUT vs CPT) ##
 ################################################################################
 # theory: whether participants' behavior is assumed to be EUT or CPT
 # mechanism: game rule that determines how rewards are given to participants
@@ -101,7 +102,7 @@ parameters <- expand.grid(
     "winner-take-all",
     "top 16% (linear)",
     "top 6% (exponential)",
-    "three-bands"
+    "three bands"
   ),
   n = 1:200,
   r = 0.1,
@@ -130,8 +131,8 @@ utility_participants <- bind_cols(parameters, utility = tmp)
 
 p <- utility_participants %>%
   ggplot(aes(x = n, y = utility, color = mechanism, linetype = theory)) +
+  geom_hline(yintercept = 0, linetype = "dashed", color = "gray60") +
   geom_line() +
-  geom_hline(yintercept = 0, linetype = "dashed") +
   xlab("Number of participants") +
   ylab("Utility") +
   scale_linetype_manual(values = c("solid", "dotted")) +
@@ -152,6 +153,17 @@ ggsave(
   filename = paste0(save_dir, "utility_participants.pdf"), plot = p,
   width = 4.5, height = 3.5
 )
+
+# find the minimum number of participants to obtain a positive utility
+utility_participants %>%
+  dplyr::filter(
+    func == "Tversky and Kahneman",
+    theory == "CPT",
+    utility > 0
+  ) %>%
+  dplyr::group_by(mechanism) %>%
+  dplyr::slice(which.min(n)) %>%
+  dplyr::select(mechanism, n)
 
 ################################################################################
 ## utility versus number of participants (with different k) ##
@@ -181,20 +193,23 @@ tmp <- parameters %>%
 utility_participants <- bind_cols(parameters, utility = tmp)
 
 p <- utility_participants %>%
-  dplyr::filter(n %in% seq(10, 200, by = 10)) %>%
-  dplyr::filter(top_k_ratio %in% c(1, 10, 25, 50, 75, 100)) %>%
-  dplyr::mutate(top_k_ratio = paste0(top_k_ratio, "%")) %>%
+  dplyr::filter(
+    n %% 10 == 0,
+    top_k_ratio %in% c(1, 15, 30, 60, 90, 100)
+  ) %>%
   dplyr::mutate(
     top_k_ratio =
-      factor(top_k_ratio, levels = c("1%", "10%", "25%", "50%", "75%", "100%"))
+      factor(percent(top_k_ratio, scale = 1),
+        levels = percent(sort(top_k_ratio), scale = 1)
+      )
   ) %>%
   ggplot(aes(
     x = n, y = utility, shape = top_k_ratio, color = top_k_ratio,
     group = top_k_weighting
   )) +
+  geom_hline(yintercept = 0, linetype = "dashed", color = "gray60") +
   # geom_line() +
   geom_point() +
-  geom_hline(yintercept = 0, linetype = "dashed") +
   scale_x_continuous(n.breaks = 5) +
   xlab("Number of participants") +
   ylab("Utility") +
@@ -224,7 +239,7 @@ p <- utility_participants %>%
   ggplot(aes(x = top_k_ratio, y = utility, color = top_k_weighting)) +
   # geom_vline(xintercept = 6, linetype = "dashed", color = "gray60") +
   # geom_vline(xintercept = 16, linetype = "dashed", color = "gray60") +
-  geom_hline(yintercept = 0, linetype = "dashed") +
+  geom_hline(yintercept = 0, linetype = "dashed", color = "gray60") +
   geom_line() +
   # geom_text(x = 6, y = 2, label = "6%", color = "gray60") +
   # geom_text(x = 16, y = 2, label = "16%", color = "gray60") +
@@ -250,13 +265,15 @@ utility_participants %>%
   dplyr::slice(which.max(utility))
 
 ################################################################################
+## utility versus fee                                                         ##
+################################################################################
 parameters <- expand.grid(
   theory = "CPT",
-  top_k_ratio = 15,
+  top_k_ratio = 16,
   top_k_weighting = "linear",
   n = 1:200,
-  r = c(0.1, 0.2),
-  fee = 1:3,
+  r = 0.1,
+  fee = 10^(0:4),
   func = "Tversky and Kahneman"
 ) %>%
   dplyr::rowwise() %>%
@@ -274,15 +291,19 @@ tmp <- parameters %>%
 utility_participants <- bind_cols(parameters, utility = tmp)
 
 p <- utility_participants %>%
-  dplyr::mutate(r = paste0(r * 100, "%")) %>%
+  dplyr::mutate(r = percent(r)) %>%
   dplyr::mutate(
-    f = factor(fee, levels = 1:3),
-    r = factor(r, levels = c("10%", "20%"))
+    f = factor(comma(fee), levels = comma(sort(fee)))
   ) %>%
   ggplot(aes(
-    x = n, y = utility, color = f, linetype = r
+    x = n, y = utility, color = f
   )) +
   geom_line() +
+  scale_y_continuous(
+    trans = log10_trans(),
+    breaks = trans_breaks("log10", function(x) 10^x),
+    labels = trans_format("log10", math_format(10^.x))
+  ) +
   xlab("Number of participants") +
   ylab("Utility") +
   theme(
@@ -292,39 +313,107 @@ p <- utility_participants %>%
     legend.margin = margin(t = 0, unit = "cm")
   ) +
   guides(
-    shape = guide_legend(nrow = 1, byrow = TRUE),
+    # shape = guide_legend(nrow = 1, byrow = TRUE),
     color = guide_legend(nrow = 1, byrow = TRUE)
   )
 
 ggsave(
-  filename = paste0(save_dir, "utility_fee_r.pdf"), plot = p,
+  filename = paste0(save_dir, "utility_f.pdf"), plot = p,
   width = 4, height = 3
 )
 
-# when a utility gets positive (by each mechanism)
+################################################################################
+## utility versus r                                                           ##
+################################################################################
+parameters <- expand.grid(
+  theory = "CPT",
+  top_k_ratio = 16,
+  top_k_weighting = "linear",
+  n = 1:200,
+  r = c(0.05, 0.1, 0.3, 0.5, 0.7, 0.9),
+  fee = 1,
+  func = "Tversky and Kahneman"
+) %>%
+  dplyr::rowwise() %>%
+  dplyr::mutate(
+    mechanism =
+      paste0("top ", top_k_ratio, "% (", top_k_weighting, ")")
+  ) %>%
+  dplyr::select(
+    theory, mechanism, n, r, fee, func, top_k_weighting, top_k_ratio
+  )
+
+
+tmp <- parameters %>%
+  purrr::pmap(calc_utility) %>%
+  unlist()
+utility_participants <- bind_cols(parameters, utility = tmp)
+
 utility_participants %>%
-  dplyr::filter(utility > 0) %>%
-  dplyr::group_by(fee, r) %>%
-  dplyr::slice(which.min(utility)) %>%
-  dplyr::select(r, fee, n)
+  dplyr::group_by(r) %>%
+  dplyr::summarize(utility = mean(utility))
+p <- utility_participants %>%
+  dplyr::mutate(r = factor(percent(r), levels = percent(sort(r)))) %>%
+  ggplot(aes(x = n, y = utility, color = r)) +
+  geom_hline(yintercept = 0, linetype = "dashed", color = "gray60") +
+  geom_line() +
+  xlab("Number of participants") +
+  ylab("Utility") +
+  theme(
+    legend.title = element_blank(),
+    legend.text = element_text(size = 7),
+    legend.position = "bottom",
+    legend.margin = margin(t = 0, unit = "cm")
+  ) +
+  guides(
+    # shape = guide_legend(nrow = 1, byrow = TRUE),
+    color = guide_legend(nrow = 1, byrow = TRUE)
+  )
+
+ggsave(
+  filename = paste0(save_dir, "utility_r.pdf"), plot = p,
+  width = 4, height = 3
+)
 
 ################################################################################
 ## Organizer's profit                                                         ##
 ################################################################################
-# We use the previous results for this
+parameters <- expand.grid(
+  theory = "CPT",
+  top_k_ratio = 16,
+  top_k_weighting = "linear",
+  n = 1:200,
+  r = c(0.05, 0.1, 0.2),
+  fee = 1:2,
+  func = "Tversky and Kahneman"
+) %>%
+  dplyr::rowwise() %>%
+  dplyr::mutate(
+    mechanism =
+      paste0("top ", top_k_ratio, "% (", top_k_weighting, ")")
+  ) %>%
+  dplyr::select(
+    theory, mechanism, n, r, fee, func, top_k_weighting, top_k_ratio
+  )
+
+
+tmp <- parameters %>%
+  purrr::pmap(calc_utility) %>%
+  unlist()
+utility_participants <- bind_cols(parameters, utility = tmp)
+
 p <- utility_participants %>%
   # Organizer's profit is 0 if utility <= 0, otherwise r * n * fee
   dplyr::mutate(profit = ifelse(utility <= 0,
     0,
     r * n * fee
   )) %>%
-  dplyr::mutate(r = paste0(r * 100, "%")) %>%
   dplyr::mutate(
-    f = factor(fee, levels = 1:3),
-    r = factor(r, levels = c("10%", "20%"))
+    f = factor(fee, levels = sort(fee)),
+    r = factor(percent(r), levels = percent(sort(r)))
   ) %>%
   ggplot(aes(
-    x = n, y = profit, color = f, linetype = r
+    x = n, y = profit, color = r, linetype = f
   )) +
   geom_line() +
   xlab("Number of participants") +
@@ -336,11 +425,18 @@ p <- utility_participants %>%
     legend.margin = margin(t = 0, unit = "cm")
   ) +
   guides(
-    shape = guide_legend(nrow = 1, byrow = TRUE),
-    color = guide_legend(nrow = 1, byrow = TRUE)
+    color = guide_legend(nrow = 1, byrow = TRUE),
+    linetype = guide_legend(nrow = 1, byrow = TRUE)
   )
 
 ggsave(
   filename = paste0(save_dir, "organizer_profit.pdf"), plot = p,
   width = 4, height = 3
 )
+
+# find when a utility gets positive
+utility_participants %>%
+  dplyr::filter(utility > 0) %>%
+  dplyr::group_by(fee, r) %>%
+  dplyr::slice(which.min(utility)) %>%
+  dplyr::select(r, fee, n)
