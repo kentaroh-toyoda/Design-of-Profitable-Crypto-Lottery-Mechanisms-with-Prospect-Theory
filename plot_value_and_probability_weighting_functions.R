@@ -17,7 +17,7 @@ g <- ggplot() +
 
 ggsave(
   filename = paste0(fig_dir, "v_x.pdf"), plot = g,
-  width = 3.6, height = 2.7
+  device = cairo_pdf, width = 3.6, height = 2.7
 )
 
 # pi(p): a probability weighting function
