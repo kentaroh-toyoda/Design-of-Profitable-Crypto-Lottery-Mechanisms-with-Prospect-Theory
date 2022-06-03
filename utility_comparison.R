@@ -85,8 +85,9 @@ calc_utility <- function(theory, mechanism, n, r, fee, func,
     }
   }
 }
+
 ################################################################################
-## utility versus number of participants (with different v and p, EUT vs CPT) ##
+## utility versus number of participants (with different k) ##
 ################################################################################
 # theory: whether participants' behavior is assumed to be EUT or CPT
 # mechanism: game rule that determines how rewards are given to participants
@@ -96,78 +97,6 @@ calc_utility <- function(theory, mechanism, n, r, fee, func,
 # func: which value and weighting functions are used
 # top-k: k denotes how much participants would receive prizes in %
 # top-k-weighting: how prizes are split in top-k mechanisms
-parameters <- expand.grid(
-  theory = factor(c("CPT", "EUT"), levels = c("CPT", "EUT")),
-  mechanism = c(
-    "winner-take-all",
-    "top 16% (linear)",
-    "top 6% (exponential)",
-    "three bands"
-  ),
-  n = 1:200,
-  r = 0.1,
-  fee = 1,
-  func = c("Tversky and Kahneman", "Prelec")
-) %>%
-  # extract top_k_ratio for top-k
-  dplyr::rowwise() %>%
-  dplyr::mutate(
-    top_k_ratio = ifelse(
-      stringr::str_detect(mechanism, "^top"),
-      stringr::str_extract(mechanism, "\\d+") %>% as.numeric(),
-      NA
-    ),
-    top_k_weighting = ifelse(
-      stringr::str_detect(mechanism, "^top"),
-      stringr::str_match(mechanism, "\\((\\w+)\\)") %>% .[2],
-      NA
-    )
-  )
-
-tmp <- parameters %>%
-  purrr::pmap(calc_utility) %>%
-  unlist()
-utility_participants <- bind_cols(parameters, utility = tmp)
-
-p <- utility_participants %>%
-  ggplot(aes(x = n, y = utility, color = mechanism, linetype = theory)) +
-  geom_hline(yintercept = 0, linetype = "dashed", color = "gray60") +
-  geom_line() +
-  xlab("Number of participants") +
-  ylab("Utility") +
-  scale_linetype_manual(values = c("solid", "dotted")) +
-  theme(
-    legend.title = element_blank(),
-    legend.position = "bottom",
-    legend.text = element_text(size = 7),
-    legend.box = "horizontal",
-    legend.background = element_blank()
-  ) +
-  guides(
-    shape = guide_legend(nrow = 2, byrow = TRUE),
-    color = guide_legend(nrow = 2, byrow = TRUE)
-  ) +
-  facet_wrap(. ~ func, scales = "fixed")
-
-ggsave(
-  filename = paste0(save_dir, "utility_participants.pdf"), plot = p,
-  width = 4.5, height = 3.5
-)
-
-# find the minimum number of participants to obtain a positive utility
-utility_participants %>%
-  dplyr::filter(
-    func == "Tversky and Kahneman",
-    theory == "CPT",
-    utility > 0
-  ) %>%
-  dplyr::group_by(mechanism) %>%
-  dplyr::slice(which.min(n)) %>%
-  dplyr::select(mechanism, n)
-
-################################################################################
-## utility versus number of participants (with different k) ##
-################################################################################
 parameters <- expand.grid(
   theory = "CPT",
   top_k_ratio = 1:100,
@@ -257,12 +186,84 @@ ggsave(
   plot = p, width = 4, height = 3
 )
 
-# which k gives us the highest average utility?
+# find ks that give us the highest average utility
 utility_participants %>%
   dplyr::group_by(top_k_ratio, top_k_weighting) %>%
   dplyr::summarize(utility = mean(utility), .groups = "drop") %>%
   dplyr::group_by(top_k_weighting) %>%
   dplyr::slice(which.max(utility))
+
+################################################################################
+## utility versus number of participants (with different v and p, EUT vs CPT) ##
+################################################################################
+parameters <- expand.grid(
+  theory = factor(c("CPT", "EUT"), levels = c("CPT", "EUT")),
+  mechanism = c(
+    "winner-take-all",
+    "top 16% (linear)",
+    "top 6% (exponential)",
+    "three bands"
+  ),
+  n = 1:200,
+  r = 0.1,
+  fee = 1,
+  func = c("Tversky and Kahneman", "Prelec")
+) %>%
+  # extract top_k_ratio for top-k
+  dplyr::rowwise() %>%
+  dplyr::mutate(
+    top_k_ratio = ifelse(
+      stringr::str_detect(mechanism, "^top"),
+      stringr::str_extract(mechanism, "\\d+") %>% as.numeric(),
+      NA
+    ),
+    top_k_weighting = ifelse(
+      stringr::str_detect(mechanism, "^top"),
+      stringr::str_match(mechanism, "\\((\\w+)\\)") %>% .[2],
+      NA
+    )
+  )
+
+tmp <- parameters %>%
+  purrr::pmap(calc_utility) %>%
+  unlist()
+utility_participants <- bind_cols(parameters, utility = tmp)
+
+p <- utility_participants %>%
+  ggplot(aes(x = n, y = utility, color = mechanism, linetype = theory)) +
+  geom_hline(yintercept = 0, linetype = "dashed", color = "gray60") +
+  geom_line() +
+  xlab("Number of participants") +
+  ylab("Utility") +
+  scale_linetype_manual(values = c("solid", "dotted")) +
+  theme(
+    legend.title = element_blank(),
+    legend.position = "bottom",
+    legend.text = element_text(size = 7),
+    legend.box = "horizontal",
+    legend.background = element_blank()
+  ) +
+  guides(
+    shape = guide_legend(nrow = 2, byrow = TRUE),
+    color = guide_legend(nrow = 2, byrow = TRUE)
+  ) +
+  facet_wrap(. ~ func, scales = "fixed")
+
+ggsave(
+  filename = paste0(save_dir, "utility_participants.pdf"), plot = p,
+  width = 4.5, height = 3.5
+)
+
+# find the minimum number of participants to obtain a positive utility
+utility_participants %>%
+  dplyr::filter(
+    func == "Tversky and Kahneman",
+    theory == "CPT",
+    utility > 0
+  ) %>%
+  dplyr::group_by(mechanism) %>%
+  dplyr::slice(which.min(n)) %>%
+  dplyr::select(mechanism, n)
 
 ################################################################################
 ## utility versus fee                                                         ##
@@ -307,7 +308,7 @@ p <- utility_participants %>%
   xlab("Number of participants") +
   ylab("Utility") +
   theme(
-    # legend.title = element_blank(),
+    legend.title = element_blank(),
     legend.text = element_text(size = 8),
     legend.position = "bottom",
     legend.margin = margin(t = 0, unit = "cm")
@@ -349,9 +350,6 @@ tmp <- parameters %>%
   unlist()
 utility_participants <- bind_cols(parameters, utility = tmp)
 
-utility_participants %>%
-  dplyr::group_by(r) %>%
-  dplyr::summarize(utility = mean(utility))
 p <- utility_participants %>%
   dplyr::mutate(r = factor(percent(r), levels = percent(sort(r)))) %>%
   ggplot(aes(x = n, y = utility, color = r)) +
@@ -375,14 +373,21 @@ ggsave(
   width = 4, height = 3
 )
 
+# find the number of participants required
+utility_participants %>%
+  dplyr::filter(utility > 0) %>%
+  dplyr::group_by(r) %>%
+  dplyr::slice(which.min(n)) %>%
+  dplyr::select(r, n)
+
 ################################################################################
-## Organizer's profit                                                         ##
+## Operator's profit                                                         ##
 ################################################################################
 parameters <- expand.grid(
   theory = "CPT",
   top_k_ratio = 16,
   top_k_weighting = "linear",
-  n = 1:200,
+  n = 1:50,
   r = c(0.05, 0.1, 0.2),
   fee = 1:2,
   func = "Tversky and Kahneman"
@@ -403,7 +408,7 @@ tmp <- parameters %>%
 utility_participants <- bind_cols(parameters, utility = tmp)
 
 p <- utility_participants %>%
-  # Organizer's profit is 0 if utility <= 0, otherwise r * n * fee
+  # Operator's profit is 0 if utility <= 0, otherwise r * n * fee
   dplyr::mutate(profit = ifelse(utility <= 0,
     0,
     r * n * fee
@@ -417,7 +422,7 @@ p <- utility_participants %>%
   )) +
   geom_line() +
   xlab("Number of participants") +
-  ylab("Organizer's expected profit") +
+  ylab("Operator's expected profit") +
   theme(
     # legend.title = element_blank(),
     legend.text = element_text(size = 8),
@@ -430,7 +435,7 @@ p <- utility_participants %>%
   )
 
 ggsave(
-  filename = paste0(save_dir, "organizer_profit.pdf"), plot = p,
+  filename = paste0(save_dir, "operator_profit.pdf"), plot = p,
   width = 4, height = 3
 )
 

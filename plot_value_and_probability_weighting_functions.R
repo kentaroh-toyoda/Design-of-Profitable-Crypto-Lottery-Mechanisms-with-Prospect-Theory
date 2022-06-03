@@ -6,11 +6,6 @@ fig_dir <- "./plots/"
 alpha <- 0.88
 lambda <- 2.25
 
-# grapthics parameters
-ratio <- 0.9
-width <- 4 * ratio
-height <- 3 * ratio
-
 g <- ggplot() +
   xlim(-100, 100) +
   geom_function(
@@ -22,7 +17,7 @@ g <- ggplot() +
 
 ggsave(
   filename = paste0(fig_dir, "v_x.pdf"), plot = g,
-  width = width, height = height
+  width = 3.6, height = 2.7
 )
 
 # pi(p): a probability weighting function
@@ -47,14 +42,13 @@ g <- ggplot() +
   xlab("p") +
   ylab("w(p)") +
   theme(
-    legend.justification = c(0, 0),
-    legend.position = c(0, 0.55),
     legend.title = element_blank(),
     legend.key = element_blank(),
-    legend.background = element_blank()
+    legend.position = "bottom",
+    legend.margin = margin(t = 0, unit = "cm")
   )
 
 ggsave(
   filename = paste0(fig_dir, "w_p.pdf"), plot = g,
-  width = width, height = height
+  width = 3.6, height = 3.2
 )
