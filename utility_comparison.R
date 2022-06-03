@@ -156,7 +156,7 @@ p <- utility_participants %>%
 
 ggsave(
   filename = paste0(save_dir, "utility_participants_rank_weight.pdf"), plot = p,
-  width = 4.5, height = 3
+  device = cairo_pdf, width = 4.5, height = 3
 )
 
 ################################################################################
@@ -183,7 +183,7 @@ p <- utility_participants %>%
 
 ggsave(
   filename = paste0(save_dir, "utility_participants_rank_weight_average.pdf"),
-  plot = p, width = 4, height = 3
+  plot = p, device = cairo_pdf, width = 4, height = 3
 )
 
 # find ks that give us the highest average utility
@@ -251,7 +251,7 @@ p <- utility_participants %>%
 
 ggsave(
   filename = paste0(save_dir, "utility_participants.pdf"), plot = p,
-  width = 4.5, height = 3.5
+  device = cairo_pdf, width = 4.5, height = 3.5
 )
 
 # find the minimum number of participants to obtain a positive utility
@@ -320,7 +320,7 @@ p <- utility_participants %>%
 
 ggsave(
   filename = paste0(save_dir, "utility_f.pdf"), plot = p,
-  width = 4, height = 3
+  device = cairo_pdf, width = 4, height = 3
 )
 
 ################################################################################
@@ -370,7 +370,7 @@ p <- utility_participants %>%
 
 ggsave(
   filename = paste0(save_dir, "utility_r.pdf"), plot = p,
-  width = 4, height = 3
+  device = cairo_pdf, width = 4, height = 3
 )
 
 # find the number of participants required
@@ -436,7 +436,7 @@ p <- utility_participants %>%
 
 ggsave(
   filename = paste0(save_dir, "operator_profit.pdf"), plot = p,
-  width = 4, height = 3
+  device = cairo_pdf, width = 4, height = 3
 )
 
 # find when a utility gets positive

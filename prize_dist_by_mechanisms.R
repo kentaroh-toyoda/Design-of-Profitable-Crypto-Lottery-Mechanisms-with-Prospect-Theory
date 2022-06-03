@@ -1,15 +1,6 @@
 require("tidyverse")
 save_dir <- "./plots/"
 
-print(system("ls -al"))
-n_participants <- 100
-mechanisms <- c(
-  "winner-take-all",
-  "top-k (linear weighting)",
-  "top-k (exponential weighting)",
-  "three bands"
-)
-
 prize_dist <- function(n, mechanism, r = 0.2) {
   if (mechanism == "winner-take-all") {
     c(1, rep(0, n - 1))
@@ -28,6 +19,13 @@ prize_dist <- function(n, mechanism, r = 0.2) {
   }
 }
 
+n_participants <- 100
+mechanisms <- c(
+  "winner-take-all",
+  "top-k (linear weighting)",
+  "top-k (exponential weighting)",
+  "three bands"
+)
 parameters <- expand.grid(
   n = n_participants,
   mechanism = mechanisms
@@ -35,12 +33,12 @@ parameters <- expand.grid(
 
 tmp <- parameters %>%
   purrr::pmap(prize_dist) %>%
-  purrr::map_df(broom::tidy)
+  unlist()
 
 prize_distribution <- tibble(
   mechanism = rep(parameters$mechanism, each = n_participants),
   n = rep(1:n_participants, length(mechanisms)),
-  prize = tmp$x
+  prize = tmp
 )
 
 g <- prize_distribution %>%
@@ -53,5 +51,5 @@ g <- prize_distribution %>%
 
 ggsave(
   filename = paste0(save_dir, "prize_dist_by_mechanisms.pdf"),
-  plot = g, width = 6, height = 4.5
+  plot = g, device = cairo_pdf, width = 6, height = 4.5
 )

@@ -50,5 +50,5 @@ g <- ggplot() +
 
 ggsave(
   filename = paste0(fig_dir, "w_p.pdf"), plot = g,
-  width = 3.6, height = 3.2
+  device = cairo_pdf, width = 3.6, height = 3.2
 )
