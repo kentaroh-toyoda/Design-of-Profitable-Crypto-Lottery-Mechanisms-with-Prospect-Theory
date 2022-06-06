@@ -1,6 +1,6 @@
 # Overview
 
-This contains R programs and docker files to reproduce the results of our paper "Web3 Meets Behavioral Economics: An Example of Designing Profitable Crypto Lottery Mechanisms" submitted to IEEE BRAINS 2022.
+This contains R programs and docker files to reproduce the results of our paper "Web3 Meets Behavioral Economics: An Example of Profitable Crypto Lottery Mechanism Design" submitted to IEEE BRAINS 2022.
 
 # Prerequisites
 
